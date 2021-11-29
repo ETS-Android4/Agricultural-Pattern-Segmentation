@@ -22,11 +22,18 @@ import android.widget.Button;
 import android.widget.ImageView;
 
 
+import org.json.JSONObject;
+
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -36,6 +43,18 @@ public class MainActivity extends AppCompatActivity {
     ImageView selectedImage;
     Button cameraBtn;
     String currentPhotoPath;
+
+    // routing
+    public static final String HOME_ENDPOINT_URI = "https://mscg-flask-rest-api.herokuapp.com/";
+    public static final String BASE_EXT = "/api/v1/mscg";
+    public static final String Rx50_EXT = "/rx50";
+    public static final String Rx101_EXT = "/rx101";
+    public static final String UPLOAD_EXT = "/input?=%";
+
+    // upload endpoints
+    public static final String UPLOAD_Rx50_FULL_URI = HOME_ENDPOINT_URI + BASE_EXT + Rx50_EXT + UPLOAD_EXT;
+    public static final String UPLOAD_Rx101_FULL_URI = HOME_ENDPOINT_URI + BASE_EXT + Rx101_EXT + UPLOAD_EXT;
+
 
 
 
@@ -127,11 +146,11 @@ public class MainActivity extends AppCompatActivity {
 //        OkHttpClient client = new OkHttpClient();
 //
 //        Request request = new Request.Builder()
-//                .url(url)
+//                .url(UPLOAD_Rx50_FULL_URI)
 //                .put(file) // <-- PUT IMAGE HERE
 //                .addHeader("Authorization", header)
 //                .build();
-//
+////        request.
 //        makeCall(client, request);
 
     }
@@ -150,6 +169,49 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    /**
+     * POST Method
+     * TODO: Alternative method for uploading -- note should handle for 2 cases
+     * 1. Rx50
+     * 2 Rx101
+     * @param uploadImageEndpoint
+     */
+    public void sendPost(String uploadImageEndpoint, File file) {
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    URL url = new URL(uploadImageEndpoint);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
+                    conn.setRequestProperty("Accept","application/json");
+                    conn.setDoOutput(true);
+                    conn.setDoInput(true);
+
+                    JSONObject jsonParam = new JSONObject();
+                    // add image here
+
+                    Log.i("JSON", jsonParam.toString());
+                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                    //os.writeBytes(URLEncoder.encode(jsonParam.toString(), "UTF-8"));
+                    os.writeBytes(jsonParam.toString());
+
+                    os.flush();
+                    os.close();
+
+                    Log.i("STATUS", String.valueOf(conn.getResponseCode()));
+                    Log.i("MSG" , conn.getResponseMessage());
+
+                    conn.disconnect();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        thread.start();
+    }
     // Helper function for dispatchTakePictureIntent() to store images into file format
     private File createImageFile() throws IOException {
         // Create an image file name
